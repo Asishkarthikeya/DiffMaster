@@ -1,7 +1,7 @@
 """Policy models - org/repo-level review policy packs."""
 
 import uuid
-from enum import Enum as PyEnum
+from enum import StrEnum
 
 from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
-class PolicyScope(str, PyEnum):
+class PolicyScope(StrEnum):
     GLOBAL = "global"
     ORGANIZATION = "organization"
     REPOSITORY = "repository"
@@ -33,7 +33,7 @@ class Policy(UUIDMixin, TimestampMixin, Base):
         return f"<Policy {self.name}>"
 
 
-class RuleType(str, PyEnum):
+class RuleType(StrEnum):
     FORBIDDEN_API = "forbidden_api"
     REQUIRED_PATTERN = "required_pattern"
     SECRET_DETECTION = "secret_detection"

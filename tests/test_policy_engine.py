@@ -1,12 +1,9 @@
 """Tests for the policy engine."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.integrations.base import DiffHunk
-from app.services.diff_parser import TokenizedHunk, tokenize_hunks
+from app.services.diff_parser import tokenize_hunks
 from app.services.policy_engine import (
-    PolicyViolation,
     _apply_builtin_forbidden_apis,
     _apply_builtin_secret_detection,
     _file_matches_glob,
@@ -60,7 +57,10 @@ class TestBuiltinSecretDetection:
         hunk = DiffHunk(
             file_path="app.py",
             old_start=1, old_count=1, new_start=1, new_count=2,
-            content="+def get_user(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()"
+            content=(
+                "+def get_user(user_id: int):\n"
+                "+    return db.query(User).filter_by(id=user_id).first()"
+            )
         )
         tokenized = tokenize_hunks([hunk])
         violations = _apply_builtin_secret_detection(tokenized[0])

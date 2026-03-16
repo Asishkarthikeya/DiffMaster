@@ -2,8 +2,7 @@
 
 import asyncio
 import time
-import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import select
@@ -18,12 +17,11 @@ from app.models.repository import Repository
 from app.models.review import Review, ReviewStatus
 from app.services.blast_radius import analyze_blast_radius
 from app.services.comment_generator import (
-    FormattedComment,
     format_for_vcs,
     generate_comments,
     generate_summary,
 )
-from app.services.diff_parser import compute_content_hash, smart_chunk, tokenize_hunks
+from app.services.diff_parser import smart_chunk, tokenize_hunks
 from app.services.policy_engine import evaluate_policies
 from app.services.review_engine import run_review
 from app.workers.celery_app import celery_app
@@ -64,7 +62,7 @@ async def _process_review(review_id: str) -> None:
             return
 
         review.status = ReviewStatus.PROCESSING
-        review.started_at = datetime.now(timezone.utc)
+        review.started_at = datetime.now(UTC)
         await session.commit()
 
         start_time = time.monotonic()
@@ -74,7 +72,7 @@ async def _process_review(review_id: str) -> None:
             diff_hunks = await vcs.get_diff(repo.full_name, review.pr_number)
             if not diff_hunks:
                 review.status = ReviewStatus.COMPLETED
-                review.completed_at = datetime.now(timezone.utc)
+                review.completed_at = datetime.now(UTC)
                 review.processing_time_ms = int((time.monotonic() - start_time) * 1000)
                 await session.commit()
                 return
@@ -141,14 +139,14 @@ async def _process_review(review_id: str) -> None:
                 logger.exception("vcs_comment_post_failed", review_id=review_id)
 
             review.status = ReviewStatus.COMPLETED
-            review.completed_at = datetime.now(timezone.utc)
+            review.completed_at = datetime.now(UTC)
             review.processing_time_ms = int((time.monotonic() - start_time) * 1000)
 
         except Exception as exc:
             logger.exception("review_processing_failed", review_id=review_id)
             review.status = ReviewStatus.FAILED
             review.error_message = str(exc)[:1000]
-            review.completed_at = datetime.now(timezone.utc)
+            review.completed_at = datetime.now(UTC)
             review.processing_time_ms = int((time.monotonic() - start_time) * 1000)
 
         await session.commit()

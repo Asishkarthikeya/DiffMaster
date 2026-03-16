@@ -1,19 +1,18 @@
 """Application configuration via pydantic-settings."""
 
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Environment(str, Enum):
+class Environment(StrEnum):
     DEVELOPMENT = "development"
     STAGING = "staging"
     PRODUCTION = "production"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     BLOCKER = "BLOCKER"
     WARNING = "WARNING"
     INFO = "INFO"

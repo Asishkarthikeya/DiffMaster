@@ -1,17 +1,16 @@
 """Tests for diff parsing and smart chunking."""
 
-import pytest
 
 from app.integrations.base import DiffHunk
 from app.services.diff_parser import (
     ChunkedDiff,
     TokenizedHunk,
+    calculate_risk_score,
     classify_diff_lines,
     compute_content_hash,
     count_tokens,
     smart_chunk,
     tokenize_hunks,
-    calculate_risk_score,
 )
 
 

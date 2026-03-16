@@ -2,17 +2,13 @@
 
 import json
 
-import pytest
-
+from app.parsing.tree_sitter_parser import CodeSymbol
+from app.services.blast_radius import BlastRadiusReport, ImpactedSymbol, SecurityBoundary
+from app.services.diff_parser import tokenize_hunks
 from app.services.review_engine import (
-    AIReviewFinding,
     _build_chunk_prompt,
     _parse_ai_response,
 )
-from app.integrations.base import DiffHunk
-from app.services.diff_parser import TokenizedHunk, tokenize_hunks
-from app.services.blast_radius import BlastRadiusReport, ImpactedSymbol, SecurityBoundary
-from app.parsing.tree_sitter_parser import CodeSymbol
 
 
 class TestBuildChunkPrompt:
@@ -89,7 +85,12 @@ class TestParseAIResponse:
         assert findings[0].title == "SQL Injection"
 
     def test_json_with_surrounding_text(self):
-        response = 'Here are the findings:\n[{"severity": "INFO", "category": "maintainability", "file_path": "x.py", "line_start": 1, "line_end": 1, "title": "test", "body": "test"}]\nEnd.'
+        finding = json.dumps({
+            "severity": "INFO", "category": "maintainability",
+            "file_path": "x.py", "line_start": 1, "line_end": 1,
+            "title": "test", "body": "test",
+        })
+        response = f"Here are the findings:\n[{finding}]\nEnd."
         findings = _parse_ai_response(response)
         assert len(findings) == 1
 

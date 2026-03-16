@@ -8,7 +8,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.policy import Policy, PolicyRule, RuleType
+from app.models.policy import Policy, PolicyRule
 from app.services.diff_parser import TokenizedHunk
 
 logger = structlog.get_logger()
@@ -101,8 +101,15 @@ def _apply_builtin_secret_detection(hunk: TokenizedHunk) -> list[PolicyViolation
                         file_path=hunk.hunk.file_path,
                         line=hunk.hunk.new_start + i,
                         message=message,
-                        evidence=line.strip()[:100] + "..." if len(line) > 100 else line.strip(),
-                        suggestion="Remove the hardcoded secret and use environment variables or a secrets manager.",
+                        evidence=(
+                            line.strip()[:100] + "..."
+                            if len(line) > 100
+                            else line.strip()
+                        ),
+                        suggestion=(
+                            "Remove the hardcoded secret and use "
+                            "environment variables or a secrets manager."
+                        ),
                     )
                 )
                 break

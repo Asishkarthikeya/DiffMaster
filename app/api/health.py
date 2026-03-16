@@ -1,6 +1,6 @@
 """Health check endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -31,7 +31,7 @@ async def health_check(session: AsyncSession = Depends(get_db)):
     return HealthResponse(
         status="healthy" if db_status == "healthy" else "degraded",
         version=__version__,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         database=db_status,
     )
 

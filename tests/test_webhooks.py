@@ -3,8 +3,6 @@
 import hashlib
 import hmac
 
-import pytest
-
 from app.integrations.webhook_validator import (
     validate_github_signature,
     validate_gitlab_token,

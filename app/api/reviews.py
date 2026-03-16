@@ -12,7 +12,6 @@ from app.models.review import Review
 from app.schemas.comment import CommentOut, FeedbackUpdate
 from app.schemas.review import ReviewDetailOut, ReviewListOut, ReviewOut
 from app.services.feedback_tracker import (
-    FeedbackStats,
     get_category_stats,
     get_repo_feedback_stats,
 )

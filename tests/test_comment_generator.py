@@ -1,15 +1,14 @@
 """Tests for comment generation and deduplication."""
 
-import pytest
 from unittest.mock import patch
 
 from app.services.comment_generator import (
     FormattedComment,
+    _compute_hash,
+    _severity_emoji,
     format_for_vcs,
     generate_comments,
     generate_summary,
-    _compute_hash,
-    _severity_emoji,
 )
 from app.services.policy_engine import PolicyViolation
 from app.services.review_engine import AIReviewFinding, ReviewResult

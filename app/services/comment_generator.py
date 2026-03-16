@@ -102,10 +102,8 @@ def _should_include(comment: FormattedComment) -> bool:
     if comment_order > min_order:
         return False
 
-    if settings.suppress_style_only and comment.category == "maintainability" and comment.severity == "INFO":
-        return False
-
-    return True
+    is_style_only = comment.category == "maintainability" and comment.severity == "INFO"
+    return not (settings.suppress_style_only and is_style_only)
 
 
 def generate_comments(
@@ -157,8 +155,8 @@ def generate_summary(comments: list[FormattedComment]) -> str:
     parts = [
         "## DiffMaster Review Summary",
         "",
-        f"| Severity | Count |",
-        f"|----------|-------|",
+        "| Severity | Count |",
+        "|----------|-------|",
         f"| \u26d4 BLOCKER | {blocker_count} |",
         f"| \u26a0\ufe0f WARNING | {warning_count} |",
         f"| \u2139\ufe0f INFO | {info_count} |",
@@ -166,7 +164,10 @@ def generate_summary(comments: list[FormattedComment]) -> str:
     ]
 
     if blocker_count > 0:
-        parts.append("**Action Required:** This PR has blocker-level issues that must be resolved before merge.")
+        parts.append(
+            "**Action Required:** This PR has blocker-level issues "
+            "that must be resolved before merge."
+        )
         parts.append("")
 
     if comments:

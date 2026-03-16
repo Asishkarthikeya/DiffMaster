@@ -1,19 +1,16 @@
 """Tests for blast radius analysis."""
 
-import pytest
 
 from app.parsing.tree_sitter_parser import (
     CodeSymbol,
     FileAnalysis,
-    analyze_file,
     detect_language,
     extract_python_symbols,
     find_modified_symbols,
 )
 from app.services.blast_radius import (
-    BlastRadiusReport,
-    _detect_security_boundaries,
     _classify_impact_risk,
+    _detect_security_boundaries,
 )
 
 

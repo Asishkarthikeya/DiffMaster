@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import structlog
 
-from app.integrations.base import DiffHunk, VCSIntegration
+from app.integrations.base import VCSIntegration
 from app.parsing.tree_sitter_parser import (
     CodeSymbol,
     FileAnalysis,
@@ -101,7 +101,11 @@ async def analyze_blast_radius(
 
             boundaries = _detect_security_boundaries(analysis)
             report.security_boundaries.extend(boundaries)
-            all_security_names.update(b.description.split("'")[1] for b in boundaries if "'" in b.description)
+            all_security_names.update(
+                b.description.split("'")[1]
+                for b in boundaries
+                if "'" in b.description
+            )
         except Exception:
             logger.warning("blast_radius_file_fetch_failed", file=file_path)
 
@@ -126,7 +130,10 @@ async def analyze_blast_radius(
                     symbol=sym,
                     file_path=th.hunk.file_path,
                     risk_level=risk,
-                    reason=f"Modified {sym.kind} '{sym.name}' ({sym.end_line - sym.start_line} lines)",
+                    reason=(
+                        f"Modified {sym.kind} '{sym.name}' "
+                        f"({sym.end_line - sym.start_line} lines)"
+                    ),
                 )
             )
             if is_security:

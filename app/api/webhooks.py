@@ -1,6 +1,5 @@
 """Webhook intake endpoints for GitHub and GitLab."""
 
-import uuid
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -40,9 +39,10 @@ async def github_webhook(
 ):
     body = await request.body()
 
-    if settings.github_webhook_secret:
-        if not validate_github_signature(body, x_hub_signature_256 or "", settings.github_webhook_secret):
-            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    if settings.github_webhook_secret and not validate_github_signature(
+        body, x_hub_signature_256 or "", settings.github_webhook_secret
+    ):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     if x_github_event != "pull_request":
         return WebhookResponse(status="ignored", message=f"Event '{x_github_event}' not handled")
@@ -114,9 +114,10 @@ async def gitlab_webhook(
 ):
     body = await request.body()
 
-    if settings.gitlab_webhook_secret:
-        if not validate_gitlab_token(x_gitlab_token or "", settings.gitlab_webhook_secret):
-            raise HTTPException(status_code=401, detail="Invalid webhook token")
+    if settings.gitlab_webhook_secret and not validate_gitlab_token(
+        x_gitlab_token or "", settings.gitlab_webhook_secret
+    ):
+        raise HTTPException(status_code=401, detail="Invalid webhook token")
 
     payload = GitLabWebhookPayload.model_validate_json(body)
 

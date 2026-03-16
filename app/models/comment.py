@@ -1,7 +1,7 @@
 """ReviewComment model - line-anchored review comments."""
 
 import uuid
-from enum import Enum as PyEnum
+from enum import StrEnum
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text
@@ -11,20 +11,20 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
-class CommentSeverity(str, PyEnum):
+class CommentSeverity(StrEnum):
     BLOCKER = "BLOCKER"
     WARNING = "WARNING"
     INFO = "INFO"
 
 
-class CommentCategory(str, PyEnum):
+class CommentCategory(StrEnum):
     SECURITY = "security"
     RELIABILITY = "reliability"
     PERFORMANCE = "performance"
     MAINTAINABILITY = "maintainability"
 
 
-class FeedbackOutcome(str, PyEnum):
+class FeedbackOutcome(StrEnum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     REJECTED = "rejected"

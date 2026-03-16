@@ -1,7 +1,6 @@
 """Vector retrieval using pgvector for RAG-powered context augmentation."""
 
 import structlog
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
