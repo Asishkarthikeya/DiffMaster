@@ -18,7 +18,7 @@ inputs:
   model:
     description: 'Primary Gemini model to use'
     required: false
-    default: 'gemini-2.5-flash-preview-04-17'
+    default: 'gemini-2.5-flash-preview-05-20'
   severity_filter:
     description: 'Minimum severity to post (BLOCKER, WARNING, INFO)'
     required: false
