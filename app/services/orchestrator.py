@@ -83,7 +83,7 @@ def create_review_node(tools):
         if not llm:
             return {"messages": [], "proposed_comments": [], "iteration": 1}
 
-        react_agent = create_react_agent(llm, tools, state_modifier=REVIEW_SYSTEM_PROMPT)
+        react_agent = create_react_agent(llm, tools, prompt=REVIEW_SYSTEM_PROMPT)
 
         if state.get("iteration", 0) == 0:
             # First run: send diff + context
