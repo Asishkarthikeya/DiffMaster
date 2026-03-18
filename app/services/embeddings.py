@@ -1,51 +1,57 @@
-"""Gemini embeddings using the new google.genai SDK."""
+"""Local embeddings using sentence-transformers — no API key needed, free & unlimited."""
 
 import logging
-from google import genai
-
-from app.core.config import settings
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL = "text-embedding-004"
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output dimension
+_model = None
 
-# Initialize client
-_client = None
-if settings.GEMINI_API_KEY:
-    _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+def _get_model():
+    """Lazy-load the sentence-transformers model."""
+    global _model
+    if _model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("📦 Loading local embedding model (all-MiniLM-L6-v2)...")
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("✅ Local embedding model loaded.")
+        except ImportError:
+            logger.error("sentence-transformers not installed. pip install sentence-transformers")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {e}")
+            return None
+    return _model
 
 
 def get_embedding(text: str) -> list[float]:
-    """Get embedding vector for a text snippet using Gemini."""
-    if not _client:
-        logger.warning("No GEMINI_API_KEY set. Returning zero vector.")
+    """Get embedding vector for a text snippet using local model."""
+    model = _get_model()
+    if not model:
         return [0.0] * EMBEDDING_DIM
 
     try:
         text = text.replace("\n", " ")[:8000]
-        result = _client.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=text,
-        )
-        return result.embeddings[0].values
+        embedding = model.encode(text, show_progress_bar=False)
+        return embedding.tolist()
     except Exception as e:
         logger.error(f"Embedding failed: {e}")
         return [0.0] * EMBEDDING_DIM
 
 
 def get_query_embedding(text: str) -> list[float]:
-    """Get embedding optimized for search queries."""
-    if not _client:
+    """Get embedding for search queries."""
+    model = _get_model()
+    if not model:
         return [0.0] * EMBEDDING_DIM
 
     try:
         text = text.replace("\n", " ")[:2000]
-        result = _client.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=text,
-        )
-        return result.embeddings[0].values
+        embedding = model.encode(text, show_progress_bar=False)
+        return embedding.tolist()
     except Exception as e:
         logger.error(f"Query embedding failed: {e}")
         return [0.0] * EMBEDDING_DIM
