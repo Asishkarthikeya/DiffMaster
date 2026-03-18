@@ -67,8 +67,23 @@ async def run_review():
     repo = settings.GITHUB_REPOSITORY
     pr_number = int(settings.PR_NUMBER)
 
+    # --- Startup validation ---
+    logger.info("=" * 60)
+    logger.info("🤖 DiffMaster AI Code Review")
+    logger.info("=" * 60)
+    logger.info(f"  Repository:    {repo}")
+    logger.info(f"  PR Number:     {pr_number}")
+    logger.info(f"  Gemini Key:    {'✅ Set' if settings.GEMINI_API_KEY else '❌ MISSING'}")
+    logger.info(f"  Groq Key:      {'✅ Set' if settings.GROQ_API_KEY else '⚠️ Not set (optional)'}")
+    logger.info(f"  GitHub Token:  {'✅ Set' if settings.GITHUB_TOKEN else '❌ MISSING'}")
+    logger.info("=" * 60)
+
     if not repo or pr_number == 0:
         logger.error("GITHUB_REPOSITORY or PR_NUMBER not set.")
+        sys.exit(1)
+
+    if not settings.GEMINI_API_KEY and not settings.GROQ_API_KEY:
+        logger.error("No LLM API keys set! Add GEMINI_API_KEY or GROQ_API_KEY as GitHub Secrets.")
         sys.exit(1)
 
     logger.info(f"🤖 DiffMaster reviewing {repo} PR #{pr_number}")
