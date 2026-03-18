@@ -1,0 +1,32 @@
+# DiffMaster Policy Configuration
+# Place this file at your repo root as `.diffmaster.yml`
+
+max_comments_per_pr: 15
+severity_filter: INFO   # BLOCKER, WARNING, or INFO
+
+ignore_paths:
+  - "*.lock"
+  - "*.min.js"
+  - "*.generated.*"
+  - "migrations/*"
+  - "node_modules/*"
+
+security:
+  forbidden_apis:
+    - "eval("
+    - "exec("
+    - "os.system("
+    - "__import__("
+    - "pickle.loads("
+  require_parameterized_queries: true
+  flag_hardcoded_secrets: true
+
+performance:
+  flag_n_plus_one: true
+  require_timeouts_on_network_calls: true
+  flag_unbounded_loops: true
+
+style:
+  require_docstrings: true
+  naming_convention: snake_case
+  flag_dead_code: true

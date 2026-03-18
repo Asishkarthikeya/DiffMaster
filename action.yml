@@ -1,0 +1,49 @@
+name: 'DiffMaster AI Code Review'
+description: 'Automated AI code review powered by Gemini & Groq with Tree-Sitter AST analysis and NetworkX dependency graphs'
+branding:
+  icon: 'code'
+  color: 'purple'
+
+inputs:
+  gemini_api_key:
+    description: 'Google Gemini API Key'
+    required: true
+  groq_api_key:
+    description: 'Groq API Key (fallback LLM)'
+    required: false
+    default: ''
+  github_token:
+    description: 'GitHub Token for posting review comments'
+    required: true
+  model:
+    description: 'Primary Gemini model to use'
+    required: false
+    default: 'gemini-1.5-pro'
+  severity_filter:
+    description: 'Minimum severity to post (BLOCKER, WARNING, INFO)'
+    required: false
+    default: 'INFO'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run DiffMaster Review
+      shell: bash
+      env:
+        GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
+        GROQ_API_KEY: ${{ inputs.groq_api_key }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GEMINI_MODEL: ${{ inputs.model }}
+        SEVERITY_FILTER: ${{ inputs.severity_filter }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: python ${{ github.action_path }}/main.py
