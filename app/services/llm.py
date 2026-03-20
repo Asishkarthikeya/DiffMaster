@@ -1,16 +1,16 @@
 """
 DiffMaster LLM Module — Waterfall Fallback System
 
-Cascade order:
-  1. Gemini (primary model from config)
-  2. Gemini fallback variants (2.0-flash, 2.0-flash-lite, 1.5-flash)
-  3. Groq models (llama-3.3-70b, llama-3.1-8b, gemma2-9b)
+Cascade order (optimized for free-tier reliability):
+  1. Groq models (fast, reliable, free tier generous)
+  2. Gemini models (free tier quota is tight)
 
-On rate-limit / 404 / any error → automatically tries the next model.
+On rate-limit / 404 / any error → immediately tries the next model.
+No internal SDK retries — fail fast, move on.
 """
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from app.core.config import settings
 import json
@@ -20,18 +20,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 # --- Waterfall Model Chain ---
-GEMINI_MODELS = [
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-]
-
+# Groq FIRST (fast, reliable, generous free tier)
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
     "gemma2-9b-it",
+]
+
+# Gemini as FALLBACK (free tier exhausts quickly)
+GEMINI_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
 ]
 
 SYSTEM_PROMPT = """You are DiffMaster, a Senior AI Software Engineer and Security Auditor.
@@ -84,31 +84,11 @@ If no issues are found, return exactly: []
 
 
 def _build_model_chain(temperature: float = 0.2) -> list[tuple[str, object]]:
-    """Build the ordered waterfall chain of (name, llm) tuples."""
+    """Build the ordered waterfall chain of (name, llm) tuples.
+    Order: Groq first (reliable), then Gemini (quota-limited)."""
     chain = []
 
-    if settings.GEMINI_API_KEY:
-        # Primary model from config
-        primary = settings.GEMINI_MODEL
-        seen = set()
-
-        # Add primary first
-        models_to_try = [primary] + [m for m in GEMINI_MODELS if m != primary]
-
-        for model in models_to_try:
-            if model in seen:
-                continue
-            seen.add(model)
-            chain.append((
-                f"gemini/{model}",
-                ChatGoogleGenerativeAI(
-                    model=model,
-                    temperature=temperature,
-                    google_api_key=settings.GEMINI_API_KEY,
-                    max_output_tokens=4096,
-                )
-            ))
-
+    # --- Groq FIRST (generous free tier, fast) ---
     if settings.GROQ_API_KEY:
         for model in GROQ_MODELS:
             chain.append((
@@ -117,6 +97,22 @@ def _build_model_chain(temperature: float = 0.2) -> list[tuple[str, object]]:
                     model=model,
                     temperature=temperature,
                     api_key=settings.GROQ_API_KEY,
+                    max_retries=1,  # Fail fast
+                )
+            ))
+
+    # --- Gemini SECOND (as fallback) ---
+    if settings.GEMINI_API_KEY:
+        for model in GEMINI_MODELS:
+            chain.append((
+                f"gemini/{model}",
+                ChatGoogleGenerativeAI(
+                    model=model,
+                    temperature=temperature,
+                    google_api_key=settings.GEMINI_API_KEY,
+                    max_output_tokens=4096,
+                    max_retries=0,    # NO internal retries — fail immediately
+                    timeout=15,       # 15s hard timeout
                 )
             ))
 
@@ -147,7 +143,7 @@ def get_llm(temperature=0.2):
 def invoke_with_waterfall(messages: list, temperature: float = 0.2) -> str | None:
     """
     Manually invoke the waterfall chain with detailed logging.
-    Tries each model in order; on any error, moves to next.
+    Tries each model in order; on any error, moves to next IMMEDIATELY.
     Returns the response content string, or None if all models fail.
     """
     chain = _build_model_chain(temperature)
@@ -164,15 +160,15 @@ def invoke_with_waterfall(messages: list, temperature: float = 0.2) -> str | Non
             return response.content.strip()
         except Exception as e:
             error_msg = str(e)
-            if "429" in error_msg or "rate" in error_msg.lower():
+            if "429" in error_msg or "rate" in error_msg.lower() or "quota" in error_msg.lower():
                 logger.warning(f"  ⚠️ Rate limited on {name}, trying next...")
             elif "404" in error_msg or "not found" in error_msg.lower():
                 logger.warning(f"  ⚠️ Model {name} not found, trying next...")
             else:
-                logger.warning(f"  ⚠️ Error on {name}: {error_msg[:100]}, trying next...")
+                logger.warning(f"  ⚠️ Error on {name}: {error_msg[:150]}, trying next...")
 
             if i < len(chain) - 1:
-                time.sleep(0.5)  # Brief pause before retry
+                time.sleep(0.3)  # Brief pause before retry
                 continue
 
     logger.error("❌ All models in the waterfall chain failed!")
