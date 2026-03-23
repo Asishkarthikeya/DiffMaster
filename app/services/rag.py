@@ -1,5 +1,10 @@
 """
-In-memory FAISS-based RAG for DiffMaster.
+Vector-backed RAG for DiffMaster.
+
+Supports two backends (selected via USE_PGVECTOR env var):
+- FAISS (default): In-memory, zero-infrastructure, ideal for GitHub Action.
+- pgvector: PostgreSQL-backed, persistent, ideal for API server deployments.
+
 At runtime: fetch repo files → parse with Tree-Sitter → embed → index → query.
 """
 
@@ -73,11 +78,25 @@ class CodebaseIndex:
         return self.index.ntotal if self.index else 0
 
 
-def build_codebase_index(gh_client, repo_name: str, ref: str, max_files: int = 50) -> CodebaseIndex:
+def build_codebase_index(gh_client, repo_name: str, ref: str, max_files: int = 50):
     """
-    Build a FAISS index from the repo's source files.
-    Fetches files via GitHub API, parses with Tree-Sitter, embeds, and indexes.
+    Build a vector index from the repo's source files.
+
+    If USE_PGVECTOR=true and DATABASE_URL is set, uses PostgreSQL + pgvector
+    for persistent storage. Otherwise falls back to FAISS (in-memory).
+
+    Returns:
+        CodebaseIndex (FAISS) or PgVectorIndex (pgvector) — both support
+        .add_chunk(), .search(), and .size.
     """
+    from app.core.config import settings
+
+    if settings.USE_PGVECTOR and settings.DATABASE_URL:
+        logger.info("Using pgvector backend for codebase index")
+        from app.services.pgvector_db import build_pgvector_index
+        return build_pgvector_index(gh_client, repo_name, ref, max_files)
+
+    # Default: FAISS in-memory
     index = CodebaseIndex()
 
     if not FAISS_AVAILABLE:

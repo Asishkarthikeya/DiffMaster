@@ -18,3 +18,9 @@ venv/
 
 # OS
 Thumbs.db
+
+# DiffMaster audit logs
+logs/
+
+# Unrelated temp files
+AURA_temp/

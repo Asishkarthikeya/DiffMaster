@@ -19,6 +19,7 @@ import logging
 import sys
 
 from app.core.config import settings
+from app.services.audit import get_audit_logger
 from app.services.github_client import GitHubClient
 from app.services.parser import parse_diff_hunks, get_modified_functions
 from app.services.graph_builder import build_dependency_graph, get_blast_radius_context
@@ -201,6 +202,16 @@ async def run_review():
         logger.info("✅ No issues found. Clean PR!")
 
     logger.info("🤖 DiffMaster review complete.")
+
+    # FR-4: Audit log the completed review
+    audit = get_audit_logger()
+    audit.log_event("review_completed", {
+        "vcs": "github",
+        "repo": repo,
+        "pr_number": pr_number,
+        "comments_posted": len(all_comments),
+        "severity_filter": settings.SEVERITY_FILTER,
+    })
 
 
 def main():
