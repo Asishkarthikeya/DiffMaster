@@ -46,17 +46,18 @@ Analyze the code changes through three lenses:
 2. [WARNING] Reliability/Performance: N+1 queries, race conditions, unbounded loops, missing error handling.
 3. [INFO] Maintainability: Poor naming, dead code, missing tests, pattern deviations.
 
-Every comment MUST include:
-- RISK: What bad thing will happen?
-- EVIDENCE: Reference specific lines from the diff.
-- ACTION: Concrete code-based fix suggestion.
+Every comment must be conversational, highly readable, and formatted in GitHub Markdown.
+It MUST clearly define (using bold headers or lists):
+- **Risk**: What bad thing will happen?
+- **Evidence**: Reference specific lines from the diff.
+- **Action**: Concrete code-based fix suggestion, including Markdown code snippets if relevant.
 
 Noise Control:
 - ONE comment per root cause (don't repeat across files).
 - Use the policy rules and codebase context to avoid false positives.
 
 Your FINAL message must be ONLY a valid JSON array:
-[{"file_path": "str", "line": int, "severity": "BLOCKER|WARNING|INFO", "body": "RISK: ... EVIDENCE: ... ACTION: ..."}]
+[{"file_path": "str", "line": int, "severity": "BLOCKER|WARNING|INFO", "body": "Markdown formatted code review comment..."}]
 If no issues found, return: []"""
 
 GRADER_PROMPT = """You are the DiffMaster Self-Correction Grader.
