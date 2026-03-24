@@ -196,8 +196,13 @@ async def run_review():
 
     # Step 5: Post comments to GitHub
     if all_comments:
-        logger.info(f"💬 Posting {len(all_comments)} review comments...")
+        logger.info(f"💬 Posting {len(all_comments)} inline review comments...")
         gh.post_review_comments(repo, pr_number, head_sha, all_comments)
+        
+        logger.info("📝 Synthesizing top-level PR summary...")
+        from app.services.llm import generate_pr_summary
+        summary_md = generate_pr_summary(all_comments)
+        gh.post_pr_summary(repo, pr_number, summary_md)
     else:
         logger.info("✅ No issues found. Clean PR!")
 

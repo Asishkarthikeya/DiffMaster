@@ -73,3 +73,15 @@ class GitHubClient:
                     )
                 except Exception as inner_e:
                     logger.error(f"Failed to post comment on {c['file_path']}:{c['line']}: {inner_e}")
+
+    def post_pr_summary(self, repo_full_name: str, pr_number: int, summary_markdown: str):
+        """Post a top-level PR review summary."""
+        if not summary_markdown:
+            return
+        try:
+            # Post an issue comment so it appears at the bottom of the PR conversation
+            issue = self.get_repo(repo_full_name).get_issue(pr_number)
+            issue.create_comment(summary_markdown)
+            logger.info(f"Posted top-level review summary to PR #{pr_number}")
+        except Exception as e:
+            logger.error(f"Failed to post top-level review summary: {e}")
