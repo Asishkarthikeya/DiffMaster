@@ -110,10 +110,12 @@ def create_review_node(tools):
         proposed = []
         content = final_message.content
         try:
-            if "```json" in content:
-                content = content.split("```json")[-1].split("```")[0].strip()
+            if "```json" in content.lower():
+                # Find where ```json starts to preserve casing of the content
+                start_idx = content.lower().find("```json") + 7
+                content = content[start_idx:].rsplit("```", 1)[0].strip()
             elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                content = content.split("```", 1)[1].rsplit("```", 1)[0].strip()
             parsed = json.loads(content)
             if isinstance(parsed, list):
                 proposed = parsed
