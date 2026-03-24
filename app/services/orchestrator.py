@@ -50,7 +50,7 @@ Every comment must be conversational, highly readable, and formatted in GitHub M
 It MUST clearly define (using bold headers or lists):
 - **Risk**: What bad thing will happen?
 - **Evidence**: Reference specific lines from the diff.
-- **Action**: Concrete code-based fix suggestion, including Markdown code snippets if relevant.
+- **Action**: Concrete code-based fix. **MUST use GitHub's official ` ```suggestion ` syntax block so the developer can click to commit the fix directly!**
 
 Noise Control:
 - ONE comment per root cause (don't repeat across files).

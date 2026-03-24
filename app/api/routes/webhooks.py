@@ -105,17 +105,36 @@ async def github_webhook(
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    # 3. Filter to pull_request events we care about
-    if x_github_event != "pull_request":
+    # 3. Filter to pull_request or issue_comment events we care about
+    if x_github_event not in ("pull_request", "issue_comment"):
         return Response(status_code=200, content="Event ignored")
 
     action = payload.get("action", "")
-    if action not in ("opened", "synchronize", "reopened"):
-        return Response(status_code=200, content="Action ignored")
+    comment_body = ""
+    comment_id = ""
 
-    repo = payload.get("repository", {}).get("full_name", "")
-    pr_number = payload.get("number")
-    head_sha = payload.get("pull_request", {}).get("head", {}).get("sha", "")
+    if x_github_event == "pull_request":
+        if action not in ("opened", "synchronize", "reopened"):
+            return Response(status_code=200, content="Action ignored")
+        repo = payload.get("repository", {}).get("full_name", "")
+        pr_number = payload.get("number")
+        head_sha = payload.get("pull_request", {}).get("head", {}).get("sha", "")
+    else:  # issue_comment
+        if action != "created":
+            return Response(status_code=200, content="Action ignored")
+        repo = payload.get("repository", {}).get("full_name", "")
+        pr_number = payload.get("issue", {}).get("number")
+        head_sha = ""
+        comment_body = payload.get("comment", {}).get("body", "")
+        comment_id = str(payload.get("comment", {}).get("id", ""))
+        
+        if "/review" not in comment_body.lower() and "/ask" not in comment_body.lower():
+            return Response(status_code=200, content="No command found")
+        
+        # Prevent bot loops
+        sender = payload.get("sender", {}).get("login", "")
+        if "[bot]" in sender.lower() or "diffmaster" in sender.lower():
+            return Response(status_code=200, content="Ignored bot comment")
 
     if not repo or not pr_number:
         raise HTTPException(status_code=400, detail="Missing repo or PR number in payload")
@@ -145,6 +164,8 @@ async def github_webhook(
             repo=repo,
             pr_number=pr_number,
             head_sha=head_sha,
+            comment_body=comment_body,
+            comment_id=comment_id,
         )
         logger.info(f"Queued review for {repo}#{pr_number} — task_id={task.id}")
         return {"status": "queued", "task_id": task.id, "repo": repo, "pr": pr_number}

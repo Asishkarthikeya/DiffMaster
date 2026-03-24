@@ -94,6 +94,31 @@ async def run_review():
     pr = gh.get_pull_request(repo, pr_number)
     head_sha = pr.head.sha
 
+    # Check for ChatOps commands
+    import os
+    comment_body = os.environ.get("PR_COMMENT_BODY", "")
+    comment_id = os.environ.get("PR_COMMENT_ID", "")
+
+    if comment_body and "/ask" in comment_body.lower():
+        logger.info(f"💬 ChatOps triggered: {comment_body}")
+        pr_files = list(gh.get_pr_files(repo, pr_number))
+        all_patches = "\n".join([f"File: {f.filename}\n{f.patch}" for f in pr_files if getattr(f, 'patch', None)])
+        
+        from app.services.llm import invoke_with_waterfall
+        from langchain_core.messages import HumanMessage
+        prompt = f"""You are DiffMaster, an AI Code Reviewer.
+A developer asked a question about this Pull Request: \"{comment_body}\"
+
+Here are the code changes in the PR:
+{all_patches[:8000]}
+
+Please answer the developer's question directly and concisely."""
+        
+        reply = invoke_with_waterfall([HumanMessage(content=prompt)], temperature=0.3)
+        if reply:
+            gh.reply_to_comment(repo, pr_number, reply)
+        return
+
     # Step 4: Load Policy Pack (.diffmaster.yml)
     policy = load_policy_from_repo(gh, repo, ref=head_sha)
     min_severity = SEVERITY_RANK.get(policy.severity_filter.upper(), 1)
@@ -115,7 +140,7 @@ async def run_review():
     review_graph = build_review_graph(tools)
 
     # --- Process each file ---
-    pr_files = gh.get_pr_files(repo, pr_number)
+    pr_files = list(gh.get_pr_files(repo, pr_number))
     all_comments = []
 
     for file in pr_files:
@@ -200,9 +225,15 @@ async def run_review():
         gh.post_review_comments(repo, pr_number, head_sha, all_comments)
         
         logger.info("📝 Synthesizing top-level PR summary...")
-        from app.services.llm import generate_pr_summary
+        from app.services.llm import generate_pr_summary, generate_pr_description
         summary_md = generate_pr_summary(all_comments)
         gh.post_pr_summary(repo, pr_number, summary_md)
+        
+        logger.info("📄 Generating automated PR description...")
+        all_patches = "\n".join([f"File: {f.filename}\n{f.patch}" for f in pr_files if getattr(f, 'patch', None)])
+        if all_patches:
+            pr_desc = generate_pr_description(all_patches)
+            gh.update_pr_description(repo, pr_number, pr_desc)
     else:
         logger.info("✅ No issues found. Clean PR!")
 

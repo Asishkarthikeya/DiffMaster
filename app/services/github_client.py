@@ -85,3 +85,27 @@ class GitHubClient:
             logger.info(f"Posted top-level review summary to PR #{pr_number}")
         except Exception as e:
             logger.error(f"Failed to post top-level review summary: {e}")
+
+    def update_pr_description(self, repo_full_name: str, pr_number: int, description_markdown: str):
+        """Append an AI-generated summary to the PR description body."""
+        pr = self.get_pull_request(repo_full_name, pr_number)
+        current_body = pr.body or ""
+        
+        if "🤖 DiffMaster PR Summary" in current_body:
+            logger.info("PR Summary already exists. Skipping description update.")
+            return
+
+        new_body = current_body + "\n\n---\n\n" + description_markdown
+        pr.edit(body=new_body)
+        logger.info(f"Updated PR #{pr_number} description.")
+
+    def reply_to_comment(self, repo_full_name: str, pr_number: int, reply_markdown: str):
+        """Reply to a user's ChatOps comment."""
+        if not reply_markdown:
+            return
+        try:
+            issue = self.get_repo(repo_full_name).get_issue(pr_number)
+            issue.create_comment(reply_markdown)
+            logger.info(f"Posted ChatOps reply to PR #{pr_number}")
+        except Exception as e:
+            logger.error(f"Failed to post ChatOps reply: {e}")

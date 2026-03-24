@@ -61,7 +61,7 @@ Comment Standards:
 Every comment must follow this structure:
 - RISK: What bad thing will happen if this isn't fixed?
 - EVIDENCE: Reference specific lines or logic in the diff.
-- ACTION: A concrete, code-based suggestion to fix the issue.
+- ACTION: A concrete, code-based suggestion to fix the issue. **MUST use GitHub's standard ` ```suggestion ` syntax block so the developer can click to commit the fix directly!**
 
 Noise Control:
 - If multiple lines share the same root cause, provide ONE comment on the most relevant line.
@@ -256,3 +256,24 @@ Return ONLY the synthesized markdown string."""
     if not content:
         return "⚠️ DiffMaster ran into an error generating the review summary."
     return content
+
+def generate_pr_description(diff_patches: str) -> str:
+    """Generate a high-level summary of the entire Pull Request."""
+    prompt = f"""You are DiffMaster, an AI Code Reviewer. 
+Your task is to summarize the changes in this Pull Request for human reviewers.
+
+Output a beautifully formatted Markdown summary with the following structure:
+### 🤖 DiffMaster PR Summary
+**Purpose:** [One sentence describing the overall goal of the PR]
+
+**Key Changes:**
+- [Bullet points of major files changed and what was done]
+
+Raw Diff:
+{diff_patches[:8000]}
+
+Return ONLY the markdown summary."""
+
+    messages = [HumanMessage(content=prompt)]
+    content = invoke_with_waterfall(messages, temperature=0.2)
+    return content or "⚠️ Could not generate PR description."

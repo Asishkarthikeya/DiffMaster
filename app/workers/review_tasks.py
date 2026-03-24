@@ -55,6 +55,8 @@ def run_review_task(
     pr_number: int,
     head_sha: str,
     gitlab_project_id: Optional[int] = None,
+    comment_body: str = "",
+    comment_id: str = "",
 ):
     """
     Async Celery task: run DiffMaster review for a GitHub PR or GitLab MR.
@@ -65,6 +67,8 @@ def run_review_task(
         pr_number: Pull Request / Merge Request number
         head_sha: Head commit SHA
         gitlab_project_id: GitLab project ID (optional, for GitLab reviews)
+        comment_body: Extracted query for ChatOps
+        comment_id: For responding to existing comments
     """
     task_id = self.request.id
     start_time = time.time()
@@ -81,7 +85,7 @@ def run_review_task(
 
     try:
         if vcs == "github":
-            comments = _run_github_review(repo, pr_number, head_sha)
+            comments = _run_github_review(repo, pr_number, head_sha, comment_body, comment_id)
         elif vcs == "gitlab":
             comments = _run_gitlab_review(repo, pr_number, head_sha, gitlab_project_id)
         elif vcs == "bitbucket":
@@ -130,11 +134,13 @@ def enforce_retention_task():
 # Internal helpers
 # ------------------------------------------------------------------
 
-def _run_github_review(repo: str, pr_number: int, head_sha: str) -> list:
+def _run_github_review(repo: str, pr_number: int, head_sha: str, comment_body: str = "", comment_id: str = "") -> list:
     """Execute GitHub review pipeline synchronously in a new event loop."""
     import os
     os.environ["GITHUB_REPOSITORY"] = repo
     os.environ["PR_NUMBER"] = str(pr_number)
+    os.environ["PR_COMMENT_BODY"] = comment_body
+    os.environ["PR_COMMENT_ID"] = comment_id
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
