@@ -219,23 +219,33 @@ Please answer the developer's question directly and concisely."""
     # Cap total comments
     all_comments = all_comments[:policy.max_comments]
 
-    # Step 5: Post comments to GitHub
+    # Step 5: Post inline comments to GitHub (if any parsed successfully)
     if all_comments:
         logger.info(f"💬 Posting {len(all_comments)} inline review comments...")
         gh.post_review_comments(repo, pr_number, head_sha, all_comments)
+
+    # === ALWAYS generate the rich top-level review ===
+    logger.info("📝 Generating comprehensive code review...")
+    from app.services.llm import generate_full_review, generate_pr_description
+    
+    # Collect all file patches
+    file_patches = {}
+    for f in pr_files:
+        if getattr(f, 'patch', None) and f.status in ("modified", "added"):
+            file_patches[f.filename] = f.patch
+    
+    if file_patches:
+        # Generate the rich sectioned review (Bugs, Performance, Security, etc.)
+        review_md = generate_full_review(file_patches)
+        gh.post_pr_summary(repo, pr_number, review_md)
         
-        logger.info("📝 Synthesizing top-level PR summary...")
-        from app.services.llm import generate_pr_summary, generate_pr_description
-        summary_md = generate_pr_summary(all_comments)
-        gh.post_pr_summary(repo, pr_number, summary_md)
-        
+        # Generate automated PR description
         logger.info("📄 Generating automated PR description...")
-        all_patches = "\n".join([f"File: {f.filename}\n{f.patch}" for f in pr_files if getattr(f, 'patch', None)])
-        if all_patches:
-            pr_desc = generate_pr_description(all_patches)
-            gh.update_pr_description(repo, pr_number, pr_desc)
+        all_patches_str = "\n".join([f"File: {fn}\n{p}" for fn, p in file_patches.items()])
+        pr_desc = generate_pr_description(all_patches_str)
+        gh.update_pr_description(repo, pr_number, pr_desc)
     else:
-        logger.info("✅ No issues found. Clean PR!")
+        logger.info("✅ No code changes to review.")
 
     logger.info("🤖 DiffMaster review complete.")
 
