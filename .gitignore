@@ -22,5 +22,6 @@ Thumbs.db
 # DiffMaster audit logs
 logs/
 
-# Unrelated temp files
+# Test repos / temp clones (not part of DiffMaster)
 AURA_temp/
+JobWise_ATS_Analyzer/
