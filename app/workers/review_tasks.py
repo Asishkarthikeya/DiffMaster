@@ -8,8 +8,15 @@ Tasks:
 
 import asyncio
 import logging
+import os
+import sys
 import time
 from typing import Optional
+
+# Ensure project root is on sys.path so `from main import run_review` works
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 from celery import Task
 from app.workers.celery_app import celery_app
@@ -137,16 +144,37 @@ def enforce_retention_task():
 def _run_github_review(repo: str, pr_number: int, head_sha: str, comment_body: str = "", comment_id: str = "") -> list:
     """Execute GitHub review pipeline synchronously in a new event loop."""
     import os
+
+    # Load .env file so API keys are available in Celery workers
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    _env_path = os.path.join(_project_root, ".env")
+    if os.path.exists(_env_path):
+        with open(_env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    os.environ.setdefault(key.strip(), value.strip())
+
     os.environ["GITHUB_REPOSITORY"] = repo
     os.environ["PR_NUMBER"] = str(pr_number)
     os.environ["PR_COMMENT_BODY"] = comment_body
     os.environ["PR_COMMENT_ID"] = comment_id
 
+    # Reload config so it picks up the env vars we just set
+    import app.core.config as cfg
+    cfg.settings = cfg.Settings()
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        from main import run_review
-        loop.run_until_complete(run_review())
+        import importlib.util
+        # Load main.py directly by absolute path — works regardless of sys.path
+        _main_path = os.path.join(_project_root, "main.py")
+        spec = importlib.util.spec_from_file_location("main", _main_path)
+        main_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(main_module)
+        loop.run_until_complete(main_module.run_review())
         return []  # main.py handles posting; return empty list for count
     finally:
         loop.close()

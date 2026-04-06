@@ -25,3 +25,4 @@ logs/
 # Test repos / temp clones (not part of DiffMaster)
 AURA_temp/
 JobWise_ATS_Analyzer/
+dump.rdb

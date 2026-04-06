@@ -9,23 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _load_language(module, attr="language"):
-    """Load a tree-sitter language, handling both old and new API versions."""
-    lang_fn = getattr(module, attr)
-    capsule = lang_fn() if callable(lang_fn) else lang_fn
-    try:
-        return Language(capsule)
-    except TypeError:
-        # Older tree-sitter: Language() doesn't accept PyCapsule directly
-        # The capsule IS the language pointer; use Parser.set_language instead
-        return capsule
-
-
 # Map extensions to tree-sitter languages
 LANGUAGES = {
-    "py": _load_language(tree_sitter_python, "language"),
-    "js": _load_language(tree_sitter_javascript, "language"),
-    "ts": _load_language(tree_sitter_typescript, "language_typescript"),
+    "py": Language(tree_sitter_python.language()),
+    "js": Language(tree_sitter_javascript.language()),
+    "ts": Language(tree_sitter_typescript.language_typescript()),
 }
 
 

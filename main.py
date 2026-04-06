@@ -18,7 +18,7 @@ import fnmatch
 import logging
 import sys
 
-from app.core.config import settings
+from app.core.config import Settings
 from app.services.audit import get_audit_logger
 from app.services.github_client import GitHubClient
 from app.services.parser import parse_diff_hunks, get_modified_functions
@@ -65,6 +65,8 @@ def deduplicate_comments(comments: list[dict]) -> list[dict]:
 
 async def run_review():
     """Main review pipeline."""
+    # Re-read settings from current env vars (not cached import)
+    settings = Settings()
     repo = settings.GITHUB_REPOSITORY
     pr_number = int(settings.PR_NUMBER)
 
@@ -81,11 +83,11 @@ async def run_review():
 
     if not repo or pr_number == 0:
         logger.error("GITHUB_REPOSITORY or PR_NUMBER not set.")
-        sys.exit(1)
+        return
 
     if not settings.GEMINI_API_KEY and not settings.GROQ_API_KEY:
         logger.error("No LLM API keys set! Add GEMINI_API_KEY or GROQ_API_KEY as GitHub Secrets.")
-        sys.exit(1)
+        return
 
     logger.info(f"🤖 DiffMaster reviewing {repo} PR #{pr_number}")
 
